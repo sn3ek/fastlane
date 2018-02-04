@@ -202,7 +202,7 @@ module Spaceship
 
     def initialize(cookie: nil, current_team_id: nil)
       options = {
-       request: {
+        request: {
           timeout:       (ENV["SPACESHIP_TIMEOUT"] || 300).to_i,
           open_timeout:  (ENV["SPACESHIP_TIMEOUT"] || 300).to_i
         }
@@ -238,7 +238,7 @@ module Spaceship
           @logger = Logger.new(STDOUT)
         else
           # Log to file by default
-          path = "/tmp/spaceship#{Time.now.to_i}_#{Process.pid}.log"
+          path = "#{logs_path}/spaceship#{Time.now.to_i}_#{Process.pid}.log"
           @logger = Logger.new(path)
         end
 
@@ -291,6 +291,12 @@ module Spaceship
       end
 
       return path
+    end
+
+    # Returns custom path for log files
+    # @return The path where logger stores log files
+    def logs_path
+      return ENV['SPACESHIP_LOGS_PATH'] || "/tmp"
     end
 
     #####################################################
@@ -494,7 +500,7 @@ module Spaceship
       return @service_key if @service_key
 
       # Check if we have a local cache of the key
-      itc_service_key_path = "/tmp/spaceship_itc_service_key.txt"
+      itc_service_key_path = "#{logs_path}/spaceship_itc_service_key.txt"
       return File.read(itc_service_key_path) if File.exist?(itc_service_key_path)
 
       response = request(:get, "https://olympus.itunes.apple.com/v1/app/config?hostname=itunesconnect.apple.com")
@@ -518,11 +524,11 @@ module Spaceship
     def with_retry(tries = 5, &_block)
       return yield
     rescue \
-        Faraday::Error::ConnectionFailed,
-        Faraday::Error::TimeoutError,
-        Faraday::ParsingError, # <h2>Internal Server Error</h2> with content type json
-        AppleTimeoutError,
-        InternalServerError => ex # New Faraday version: Faraday::TimeoutError => ex
+      Faraday::Error::ConnectionFailed,
+      Faraday::Error::TimeoutError,
+      Faraday::ParsingError, # <h2>Internal Server Error</h2> with content type json
+      AppleTimeoutError,
+      InternalServerError => ex # New Faraday version: Faraday::TimeoutError => ex
       tries -= 1
       unless tries.zero?
         logger.warn("Timeout received: '#{ex.message}'. Retrying after 3 seconds (remaining: #{tries})...")
@@ -566,10 +572,10 @@ module Spaceship
       end
 
       response = if auto_paginate
-                   send_request_auto_paginate(method, url_or_path, params, headers, &block)
-                 else
-                   send_request(method, url_or_path, params, headers, &block)
-                 end
+        send_request_auto_paginate(method, url_or_path, params, headers, &block)
+      else
+        send_request(method, url_or_path, params, headers, &block)
+      end
 
       log_response(method, url_or_path, response)
 
