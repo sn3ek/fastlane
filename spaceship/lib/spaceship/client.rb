@@ -296,7 +296,9 @@ module Spaceship
     # Returns custom path for log files
     # @return The path where logger stores log files
     def logs_path
-      return ENV['SPACESHIP_LOGS_PATH'] || "/tmp"
+      path = ENV['SPACESHIP_LOGS_PATH'] || "/tmp"
+      FileUtils::mkdir_p path
+      return path
     end
 
     #####################################################
